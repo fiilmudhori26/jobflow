@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { registerSchema, jobSchema } from "@/lib/schemas";
+import { registerSchema, jobSchema, applicationSchema } from "@/lib/schemas";
 import { requireRole } from "@/server/auth-helpers";
 
 type ActionState = { error?: string } | undefined;
@@ -81,4 +81,45 @@ export async function closeJob(formData: FormData) {
     where: { id },
     data: { status: job.status === "OPEN" ? "CLOSED" : "OPEN" },
   });
+}
+
+// ponytail: CV link instead of file upload — needs UploadThing token. Add upload when token exists.
+export async function applyToJob(_prev: ActionState, formData: FormData) {
+  const user = await requireRole("CANDIDATE");
+  const jobId = String(formData.get("jobId") ?? "");
+  const parsed = applicationSchema.safeParse({
+    cvUrl: formData.get("cvUrl"),
+    coverLetter: formData.get("coverLetter") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const job = await db.job.findUnique({ where: { id: jobId } });
+  if (!job || job.status !== "OPEN") return { error: "Job not open" };
+
+  const existing = await db.application.findUnique({
+    where: { jobId_userId: { jobId, userId: user.id! } },
+  });
+  if (existing) return { error: "Already applied to this job" };
+
+  await db.application.create({
+    data: { jobId, userId: user.id!, ...parsed.data },
+  });
+  redirect("/applications?applied=1");
+}
+
+export async function updateApplicationStatus(formData: FormData) {
+  const user = await requireRole("COMPANY");
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "") as
+    | "APPLIED"
+    | "REVIEWING"
+    | "INTERVIEW"
+    | "HIRED"
+    | "REJECTED";
+  const app = await db.application.findUnique({
+    where: { id },
+    include: { job: { select: { ownerId: true } } },
+  });
+  if (!app || app.job.ownerId !== user.id) return;
+  await db.application.update({ where: { id }, data: { status } });
 }

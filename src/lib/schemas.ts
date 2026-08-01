@@ -21,3 +21,8 @@ export const jobSchema = z.object({
   salaryMax: optionalInt,
   description: z.string().min(20),
 });
+
+export const applicationSchema = z.object({
+  cvUrl: z.string().url().min(10),
+  coverLetter: z.string().max(2000).optional(),
+});
