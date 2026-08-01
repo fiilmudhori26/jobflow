@@ -6,7 +6,9 @@ import { db } from "@/lib/db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    Google,
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
+      ? [Google]
+      : []),
     Credentials({
       credentials: { email: {}, password: {} },
       authorize: async (creds) => {

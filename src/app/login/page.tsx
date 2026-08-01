@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const hasGoogle = !!(process.env.NEXT_PUBLIC_GOOGLE_ENABLED === "true");
+
 export default function LoginPage() {
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,9 +32,11 @@ export default function LoginPage() {
         </div>
         <Button type="submit" className="w-full">Login</Button>
       </form>
-      <Button variant="outline" className="w-full" onClick={() => signIn("google")}>
-        Continue with Google
-      </Button>
+      {hasGoogle && (
+        <Button variant="outline" className="w-full" onClick={() => signIn("google")}>
+          Continue with Google
+        </Button>
+      )}
     </div>
   );
 }
